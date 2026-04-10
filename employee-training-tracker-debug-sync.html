@@ -1,0 +1,399 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width,initial-scale=1'>
+  <title>Employee Training Tracker</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:0;background:#f8fafc;color:#0f172a}
+    .wrap{max-width:1300px;margin:auto;padding:24px}
+    .card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin-bottom:16px}
+    .grid{display:grid;gap:16px}
+    .g2{grid-template-columns:360px 1fr}
+    .g3{grid-template-columns:repeat(3,1fr)}
+    .g4{grid-template-columns:repeat(4,1fr)}
+    .g5{grid-template-columns:repeat(5,1fr)}
+    input,select,textarea,button{font:inherit}
+    input,select,textarea{width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:12px;box-sizing:border-box}
+    textarea{min-height:80px}
+    button{padding:10px 14px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;cursor:pointer}
+    .dark{background:#0f172a;color:#fff;border-color:#0f172a}
+    .danger{background:#b91c1c;color:#fff;border-color:#b91c1c}
+    .button-secondary{background:#fff;color:#0f172a;border:1px solid #cbd5e1}
+    .button-secondary:hover{background:#f8fafc}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid #e2e8f0}
+    .ready{background:#16a34a;color:#fff;border-color:#16a34a}
+    .work{background:#f59e0b;color:#fff;border-color:#f59e0b}
+    .not{background:#64748b;color:#fff;border-color:#64748b}
+    .emp{border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-bottom:10px;cursor:pointer}
+    .emp.active{background:#0f172a;color:#fff;border-color:#0f172a}
+    .small{color:#64748b;font-size:13px}
+    .emp.active .small{color:#cbd5e1}
+    .prog{height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden}
+    .bar{height:100%;background:#0f172a}
+    .module{border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-bottom:10px}
+    .locked{background:#f8fafc}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+    .tab{padding:10px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;cursor:pointer}
+    .tab.active{background:#0f172a;color:#fff;border-color:#0f172a}
+    .hidden{display:none}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end}
+    .editor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    .sync-pill{padding:8px 12px;border-radius:999px;border:1px solid #e2e8f0;background:#fff;font-size:12px}
+    .sync-ok{background:#ecfdf5;color:#166534;border-color:#bbf7d0}
+    .sync-warn{background:#fffbeb;color:#92400e;border-color:#fde68a}
+    .sync-bad{background:#fef2f2;color:#991b1b;border-color:#fecaca}
+    @media(max-width:1100px){.g2,.g3,.g4,.g5,.editor-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class='wrap'>
+  <div style='display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:end'>
+    <div>
+      <h1 style='margin:0'>Employee Training Tracker</h1>
+      <div class='small'>Opens locally first. Then tries Google Sheets sync in the background.</div>
+    </div>
+    <div class='toolbar'>
+      <div id="syncStatus" class="sync-pill sync-warn">Opening app…</div>
+      <button id='exportBtn'>Export CSV</button>
+      <button id='exportEmployeesBtn'>Export Employees</button>
+      <button id='resetBtn'>Reset</button>
+    </div>
+  </div>
+
+  <div class='grid g5' id='stats' style='margin:16px 0'></div>
+
+  <div class='tabs'>
+    <button class='tab active' data-tab='tracker'>Tracker</button>
+    <button class='tab' data-tab='editor'>Employee Editor</button>
+    <button class='tab' data-tab='evaluation'>Evaluation</button>
+    <button class='tab' data-tab='setup'>Setup</button>
+  </div>
+
+  <div id='tab-tracker'>
+    <div class='grid g2'>
+      <div class='card'>
+        <div style='font-size:20px;font-weight:700'>Employees</div>
+        <div style='height:10px'></div>
+        <input id='search' placeholder='Search name, role, or ID'>
+        <div style='height:10px'></div>
+        <select id='roleFilter'></select>
+        <div style='height:12px'></div>
+        <div id='list'></div>
+      </div>
+
+      <div class='card'>
+        <div style='display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:end'>
+          <div>
+            <div id='selName' style='font-size:24px;font-weight:700'></div>
+            <div id='selSub' class='small'></div>
+          </div>
+          <div class='toolbar'>
+            <button class='dark' id='completeAllBtn' onclick="toggleAllTrainingAction()">Complete All Training</button>
+            <input id='customModule' placeholder='Custom training item' style='width:220px'>
+            <button class='dark' id='addCustom'>Add</button>
+          </div>
+        </div>
+
+        <div style='height:16px'></div>
+        <div class='card' id='summary'></div>
+        <div id='modules'></div>
+      </div>
+    </div>
+  </div>
+
+  <div id='tab-editor' class='hidden'>
+    <div class='grid g2'>
+      <div class='card'>
+        <div style='font-size:20px;font-weight:700'>Edit selected employee</div>
+        <div style='height:12px'></div>
+        <div class='editor-grid'>
+          <div><div class='small'>Name</div><input id='editName'></div>
+          <div><div class='small'>Employee ID</div><input id='editId'></div>
+          <div><div class='small'>Position</div><input id='editPosition'></div>
+          <div><div class='small'>Email</div><input id='editEmail'></div>
+          <div><div class='small'>Phone</div><input id='editPhone'></div>
+        </div>
+        <div style='height:12px'></div>
+        <div class='toolbar'>
+          <button class='dark' id='saveEmployeeBtn'>Save changes</button>
+          <button class='danger' id='deleteEmployeeBtn'>Delete employee</button>
+        </div>
+      </div>
+
+      <div class='card'>
+        <div style='font-size:20px;font-weight:700'>Add new employee</div>
+        <div style='height:12px'></div>
+        <div class='editor-grid'>
+          <div><div class='small'>Name</div><input id='newName'></div>
+          <div><div class='small'>Employee ID</div><input id='newId'></div>
+          <div><div class='small'>Position</div><input id='newPosition'></div>
+          <div><div class='small'>Email</div><input id='newEmail'></div>
+          <div><div class='small'>Phone</div><input id='newPhone'></div>
+        </div>
+        <div style='height:12px'></div>
+        <button class='dark' id='addEmployeeBtn'>Add employee</button>
+      </div>
+    </div>
+  </div>
+
+  <div id='tab-evaluation' class='hidden'>
+    <div class='grid g2'>
+      <div class='card'><div style='font-size:20px;font-weight:700'>Evaluation</div><div id='eval'></div></div>
+      <div class='card'><div style='font-size:20px;font-weight:700'>Manager Notes</div><textarea id='mgrNotes' placeholder='Final recommendation, coaching plan, or approval notes'></textarea><div style='height:12px'></div><div id='evalSummary'></div></div>
+    </div>
+  </div>
+
+  <div id='tab-setup' class='hidden'>
+    <div class='grid g3'>
+      <div class='card'><div style='font-size:18px;font-weight:700'>Buckets</div><div id='readyBucket' style='margin-top:8px'></div><div id='workBucket' style='margin-top:12px'></div><div id='notBucket' style='margin-top:12px'></div></div>
+      <div class='card'><div style='font-size:18px;font-weight:700'>Bulk training item</div><div style='height:8px'></div><input id='bulkModule'><div style='height:12px'></div><button class='dark' id='bulkAddBtn'>Add to every employee</button></div>
+      <div class='card'><div style='font-size:18px;font-weight:700'>How this works</div><div class='small' style='margin-top:8px'>The app opens immediately from local data. Google Sheets loads in the background if available. Cashiers automatically get cashier, runner, and busser training. Trainer name is required before completion for individual items.</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL='https://script.google.com/macros/s/AKfycbymSeIsMFHQ_NGbQ7payh-Itj8ANmde6-86-7yS_jEMySWh7llvXReKLVZ6UBF8woq3/exec';
+const storageKey='training_html_v4_safe_sync';
+
+const initialEmployees = [
+  {"name":"Daniel Acosta","position":"Bartender +1","employeeId":"6244","email":"danielacosta0121@gmail.com","phone":"3612296244"},
+  {"name":"Diana Ajanel Jaimes","position":"Cashier","employeeId":"1167","email":"dajanel2006@gmail.com","phone":""},
+  {"name":"Alma Eudelia Aldana Mejia","position":"Dishwasher","employeeId":"2600","email":"aldana.alma2@gmail.com","phone":"7723240260"},
+  {"name":"Nayeli Aleman","position":"Bartender +8","employeeId":"0913","email":"alemannaya502@gmail.com","phone":"7723071159"},
+  {"name":"Elvin Alessandro","position":"Cashier +1","employeeId":"85622","email":"barahona_e1@icloud.com","phone":"7722897696"},
+  {"name":"Bangelina Antunez Gutierrez","position":"Dishwasher","employeeId":"85630","email":"evaantunez867@gmail.com","phone":"7723241271"},
+  {"name":"Eva Arballo","position":"Server +1","employeeId":"85625","email":"evaseenit@gmail.com","phone":"3055465826"},
+  {"name":"Hunter Baron","position":"Runner","employeeId":"2071","email":"baronhunter151@gmail.com","phone":"7722332071"},
+  {"name":"Randy Bartolon Vasquez","position":"Runner","employeeId":"85632","email":"randybartolon706@gmail.com","phone":"7722719228"},
+  {"name":"Edwin Bu Motino","position":"Dishwasher","employeeId":"1412","email":"edwinmotino00@gmail.com","phone":"7726461412"}
+];
+
+const evalCats=['Professional Appearance','Posture & Body Language','Communication (Team)','Communication (Guests)','Awareness & Anticipation','Composure Under Pressure','Adherence to Service Steps','Timing & Pacing','Attention to Detail','Accuracy','Menu Knowledge','Allergen Awareness','POS/System Knowledge'];
+const shifts={
+1:['Uniform and grooming','Service philosophy','Posture and language','Restaurant concept','Dining steps','Table/section layout'],
+2:['Professional movement','Guest awareness'],
+3:['Menu items','Allergens','Confidence speaking about menu'],
+4:['Timing and awareness','Team communication'],
+5:['Handles pressure calmly','Anticipates guest needs'],
+6:['Consistent professionalism','Strong communication','Works independently']
+};
+const roleItems={
+Host:['Observes reservation system','Seating rotation','Greets guests properly','Uses guest names','Answers menu questions','Understands table map','Manages guest flow','Knows table numbers','Handles difficult situations','Seats independently','Controls reservations confidently'],
+Server:['Observes full table service','Reviews menu structure','Water service','Greets table properly','Describes 5 dishes','Inputs orders correctly','Manages small section','Completes service steps','Manages larger section','Handles guest concerns','Handles full section independently','Menu and POS mastery'],
+Runner:['Observes dish delivery','Runs food with guidance','Identifies dishes','Matches dishes to tickets','Open-handed service','Seat numbers','Accurate food delivery','Maintains accuracy under pressure','Coordinates with expo','Flawless delivery'],
+Busser:['Observes clearing/reset','Clears silently','Assists table maintenance','Understands course timing','Accurate clearing/resetting','Maintains and resets tables','Seamless service','Quick resets','Perfect resets and timing'],
+Bartender:['Observes bar setup','Assists service bar setup','ID check basics','Knows core drinks','Inputs bar orders','Handles tickets with minimal help','Maintains bar standards','Handles guest issues at bar','Maintains accuracy under pressure','Runs bar independently'],
+Cashier:['Observes POS flow','Observes checkout process','Greets guests at counter','Processes simple POS transactions','Answers menu questions','Handles modifiers accurately','Handles rush with support','Keeps transaction flow accurate','Handles line pressure calmly','Solves guest payment issues professionally','Handles full cashier flow independently'],
+Cook:['Observes station setup','Observes line flow and safety','Assists with prep tasks','Sanitation basics','Knows recipes and portions','Understands allergy flags','Runs station with support','Maintains ticket pacing','Handles volume with consistency','Communicates delays clearly','Runs station independently to standard'],
+Manager:['Observes opening standards','Leadership expectations','Supports floor communication','Coaches in the moment','Understands menu and allergy standards','Verifies team knowledge','Leads active shift support','Handles floor communication','Handles guest recovery','Manages team under pressure','Leads shift independently'],
+General:['Observes team flow','Begins hands-on support tasks','Builds menu confidence','Works independently on core tasks','Maintains composure under pressure','Passes final evaluation']
+};
+
+function normRole(position){const p=(position||'').toLowerCase(); if(p.includes('cashier'))return 'Cashier'; if(p.includes('bartender')&&p.includes('server'))return 'Bartender'; if(p.includes('server'))return 'Server'; if(p.includes('bartender')||p.includes('barback'))return 'Bartender'; if(p.includes('runner'))return 'Runner'; if(p.includes('busser')||p.includes('dishwasher'))return 'Busser'; if(p.includes('cook')||p.includes('chef'))return 'Cook'; if(p.includes('host'))return 'Host'; if(p.includes('manager')||p.includes('management'))return 'Manager'; return 'General';}
+function makeModules(role){const tracks=role==='Cashier'?['Cashier','Runner','Busser']:[role]; const out=[]; for(let s=1;s<=6;s++){shifts[s].forEach(t=>out.push({id:`${s}-${t}`,shift:s,title:t,completed:false,completedDate:'',trainer:'',score:'',notes:''})); tracks.forEach(r=>(roleItems[r]||[]).forEach((t,i)=>{const bucket=Math.min(6,Math.max(1,Math.ceil((i+1)/2))); if(bucket===s) out.push({id:`${s}-${r}-${t}`,shift:s,title:`${r}: ${t}`,completed:false,completedDate:'',trainer:'',score:'',notes:''}); }));} const seen=new Set(); return out.filter(m=>seen.has(m.id)?false:(seen.add(m.id),true));}
+function fresh(){const d={employees:[],training:{}}; initialEmployees.forEach(e=>{const emp={name:e.name,position:e.position,employeeId:String(e.employeeId),email:e.email||'',phone:e.phone||''}; d.employees.push(emp); const role=normRole(emp.position); const evaluation={}; evalCats.forEach(c=>evaluation[c]=''); d.training[emp.employeeId]={...emp,role,modules:makeModules(role),evaluation,managerNotes:''};}); return d;}
+
+let state=JSON.parse(localStorage.getItem(storageKey)||'null')||fresh();
+let selectedId=state.employees[0]?.employeeId || '';
+let syncTimer=null;
+let initFinished=false;
+
+function setSyncStatus(text, type='warn'){const el=document.getElementById('syncStatus'); if(!el) return; el.textContent=text; el.className=`sync-pill ${type==='ok'?'sync-ok':type==='bad'?'sync-bad':'sync-warn'}`;}
+function saveLocal(){localStorage.setItem(storageKey, JSON.stringify(state));}
+function save(){saveLocal(); if(initFinished){ queueSheetSync(); }}
+function queueSheetSync(){ clearTimeout(syncTimer); setSyncStatus('Saving…','warn'); syncTimer=setTimeout(syncToSheets, 700); }
+function entry(id){return state.training[id];}
+function progress(e){return e.modules.length?Math.round(e.modules.filter(m=>m.completed).length/e.modules.length*100):0;}
+function shiftDone(e,s){const mods=e.modules.filter(m=>m.shift===s); return mods.length&&mods.every(m=>m.completed);}
+function currentShift(e){for(let s=1;s<=6;s++) if(!shiftDone(e,s)) return s; return 6;}
+function evalAvg(e){const vals=Object.values(e.evaluation).map(Number).filter(v=>!isNaN(v)&&v>0); return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*10)/10:0;}
+function rec(e){const avg=evalAvg(e); if(e.modules.every(m=>m.completed)&&avg>=4)return 'Ready'; if(avg>=3||e.modules.some(m=>m.completed)) return 'Needs Work'; return 'Not Ready';}
+function readyForFloor(e){return shiftDone(e,6)&&evalAvg(e)>=4;}
+function badgeClass(r){return r==='Ready'?'ready':r==='Needs Work'?'work':'not';}
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function locked(e,m){return m.shift>1&&!shiftDone(e,m.shift-1);}
+function allTrainingComplete(e){return e.modules.length>0&&e.modules.every(m=>m.completed);}
+function filteredEmployees(){const q=(document.getElementById('search')?.value || '').toLowerCase(); const rf=document.getElementById('roleFilter')?.value || 'all'; return state.employees.filter(e=>`${e.name} ${e.position} ${e.employeeId}`.toLowerCase().includes(q)&&(rf==='all'||normRole(e.position)===rf));}
+
+function toSheetRows(){
+  const employeesRows=state.employees.map(e=>({'Employee ID':e.employeeId,'Name':e.name,'Position':e.position,'Email':e.email||'','Phone':e.phone||''}));
+  const trainingRows=[]; const evaluationRows=[]; const notesRows=[];
+  state.employees.forEach(emp=>{
+    const e=entry(emp.employeeId); if(!e) return;
+    e.modules.forEach(m=>trainingRows.push({'Employee ID':e.employeeId,'Name':e.name,'Position':e.position,'Role':e.role,'Shift':m.shift,'Module ID':m.id,'Module':m.title,'Completed':m.completed?'Yes':'No','Completed Date':m.completedDate||'','Trainer':m.trainer||'','Score':m.score||'','Notes':m.notes||''}));
+    Object.entries(e.evaluation).forEach(([cat,score])=>evaluationRows.push({'Employee ID':e.employeeId,'Name':e.name,'Category':cat,'Score':score||''}));
+    notesRows.push({'Employee ID':e.employeeId,'Name':e.name,'Manager Notes':e.managerNotes||''});
+  });
+  return {employeesRows, trainingRows, evaluationRows, notesRows};
+}
+
+async function postReplaceSheet(sheetName, rows){
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      action: 'replaceSheet',
+      sheetName,
+      rows
+    })
+  });
+
+  const text = await res.text();
+  console.log('POST response for', sheetName, text);
+
+  let data = {};
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`Unexpected response for ${sheetName}: ${text}`);
+  }
+
+  if (!data.ok) {
+    throw new Error(`${sheetName}: ${data.error || 'Unknown server error'}`);
+  }
+
+  return data;
+}
+
+async function syncToSheets(){
+  try{
+    const {employeesRows, trainingRows, evaluationRows, notesRows} = toSheetRows();
+
+    await postReplaceSheet('Employees', employeesRows);
+    await postReplaceSheet('Training', trainingRows);
+    await postReplaceSheet('Evaluation', evaluationRows);
+    await postReplaceSheet('ManagerNotes', notesRows);
+
+    setSyncStatus('Saved to Google Sheets','ok');
+  } catch (err) {
+    console.error('SYNC ERROR:', err);
+    setSyncStatus(`Sync failed: ${err.message}`,'bad');
+  }
+}
+
+function buildStateFromSheets(data){
+  const employees=(data.employees || []).map(r=>({
+    name:String(r['Name'] ?? r.name ?? '').trim(),
+    position:String(r['Position'] ?? r.position ?? '').trim(),
+    employeeId:String(r['Employee ID'] ?? r.employeeId ?? '').trim(),
+    email:String(r['Email'] ?? r.email ?? '').trim(),
+    phone:String(r['Phone'] ?? r.phone ?? '').trim()
+  })).filter(e=>e.employeeId && e.name);
+  if(!employees.length) return null;
+
+  const built={employees:[], training:{}};
+  employees.forEach(emp=>{built.employees.push(emp); const role=normRole(emp.position); const evaluation={}; evalCats.forEach(c=>evaluation[c]=''); built.training[emp.employeeId]={...emp,role,modules:makeModules(role),evaluation,managerNotes:''};});
+
+  (data.training || []).forEach(r=>{
+    const eid=String(r['Employee ID'] ?? '').trim();
+    const t=built.training[eid];
+    if(!t) return;
+    const moduleId=String(r['Module ID'] ?? '').trim();
+    const title=String(r['Module'] ?? '').trim();
+    let mod=t.modules.find(m=>m.id===moduleId);
+    if(!mod && title){
+      mod={id:moduleId || `import-${Date.now()}-${Math.random()}`,shift:Number(r['Shift'])||1,title,completed:false,completedDate:'',trainer:'',score:'',notes:''};
+      t.modules.push(mod);
+    }
+    if(!mod) return;
+    mod.shift=Number(r['Shift']) || mod.shift || 1;
+    mod.title=title || mod.title;
+    mod.completed=['yes','true'].includes(String(r['Completed'] ?? '').toLowerCase());
+    mod.completedDate=String(r['Completed Date'] ?? '');
+    mod.trainer=String(r['Trainer'] ?? '');
+    mod.score=String(r['Score'] ?? '');
+    mod.notes=String(r['Notes'] ?? '');
+  });
+
+  (data.evaluation || []).forEach(r=>{
+    const eid=String(r['Employee ID'] ?? '').trim();
+    const cat=String(r['Category'] ?? '').trim();
+    if(built.training[eid] && cat) built.training[eid].evaluation[cat]=String(r['Score'] ?? '');
+  });
+
+  (data.managerNotes || []).forEach(r=>{
+    const eid=String(r['Employee ID'] ?? '').trim();
+    if(built.training[eid]) built.training[eid].managerNotes=String(r['Manager Notes'] ?? '');
+  });
+
+  return built;
+}
+
+async function loadFromSheets(){
+  try{
+    setSyncStatus('Trying Google Sheets…','warn');
+    const res=await fetch(API_URL, {method:'GET'});
+    const text=await res.text();
+    let data={};
+    try{ data=JSON.parse(text); }catch{ throw new Error('Non-JSON response'); }
+    const loaded=buildStateFromSheets(data);
+    if(loaded){
+      state=loaded;
+      selectedId=state.employees[0]?.employeeId || '';
+      saveLocal();
+      setSyncStatus('Loaded from Google Sheets','ok');
+    } else {
+      setSyncStatus('Using local data','warn');
+    }
+  }catch(err){
+    console.error(err);
+    setSyncStatus('Opened with local data','warn');
+  }
+}
+
+function renderStats(){const arr=state.employees.map(e=>entry(e.employeeId)).filter(Boolean); const stats=[['Employees',arr.length],['Training Items',arr.reduce((a,e)=>a+e.modules.length,0)],['Completed Items',arr.reduce((a,e)=>a+e.modules.filter(m=>m.completed).length,0)],['Ready for Floor',arr.filter(readyForFloor).length],['Need Attention',arr.filter(e=>rec(e)==='Not Ready').length]]; document.getElementById('stats').innerHTML=stats.map(([l,v])=>`<div class='card'><div class='small'>${l}</div><div style='font-size:28px;font-weight:700'>${v}</div></div>`).join('');}
+function renderRoleFilter(){const roles=['all',...new Set(state.employees.map(e=>normRole(e.position)))]; document.getElementById('roleFilter').innerHTML=roles.map(r=>`<option value="${r}">${r==='all'?'All roles':r}</option>`).join('');}
+function renderList(){const list=filteredEmployees(); if(!list.find(e=>e.employeeId===selectedId)&&list[0]) selectedId=list[0].employeeId; document.getElementById('list').innerHTML=list.map(e=>{const en=entry(e.employeeId); const active=e.employeeId===selectedId?'active':''; return `<div class='emp ${active}' onclick="pick('${e.employeeId}')"><div style='display:flex;justify-content:space-between;gap:8px'><div><div style='font-weight:700'>${esc(e.name)}</div><div class='small'>${esc(e.position)}</div><div class='small'>ID ${esc(e.employeeId)} · Shift ${currentShift(en)}</div></div><div><span class='badge ${badgeClass(rec(en))}'>${rec(en)}</span></div></div><div class='small' style='margin-top:8px'>Progress ${progress(en)}%</div><div class='prog'><div class='bar' style='width:${progress(en)}%'></div></div></div>`;}).join('');}
+
+function renderSelected(){
+  const e=entry(selectedId); if(!e) return;
+  document.getElementById('selName').textContent=e.name;
+  document.getElementById('selSub').textContent=`${e.position} · ${e.role} track · ${e.email||'no email'}`;
+  document.getElementById('summary').innerHTML=`<div class='grid g4'><div><div class='small'>Progress</div><div style='font-size:28px;font-weight:700'>${progress(e)}%</div></div><div><div class='small'>Current shift</div><div style='font-size:28px;font-weight:700'>${currentShift(e)}</div></div><div><div class='small'>Eval average</div><div style='font-size:28px;font-weight:700'>${evalAvg(e)||'—'}</div></div><div><div class='small'>Status</div><div style='margin-top:8px'><span class='badge ${badgeClass(rec(e))}'>${readyForFloor(e)?'Ready for Floor':rec(e)}</span></div></div></div><div style='height:10px'></div><div class='prog'><div class='bar' style='width:${progress(e)}%'></div></div>`;
+  const completeBtn=document.getElementById('completeAllBtn');
+  if(completeBtn){ if(allTrainingComplete(e)){ completeBtn.textContent='Undo Complete All'; completeBtn.className='button-secondary'; } else { completeBtn.textContent='Complete All Training'; completeBtn.className='dark'; } }
+  const groups={}; e.modules.forEach(m=>((groups[m.shift] ||= []).push(m)));
+  document.getElementById('modules').innerHTML=Object.entries(groups).map(([shift,mods])=>`<div class='card'><div style='display:flex;justify-content:space-between;gap:8px'><div><div style='font-size:20px;font-weight:700'>Shift ${shift}</div><div class='small'>Complete this shift before the next one.</div></div><span class='badge'>${mods.every(m=>m.completed)?'Complete':'In Progress'}</span></div><div style='height:12px'></div>${mods.map(m=>`<div class='module ${locked(e,m)&&!m.completed?'locked':''}'><div class='grid g3'><div><label><input type='checkbox' ${m.completed?'checked':''} ${locked(e,m)&&!m.completed?'disabled':''} onchange="toggleComplete('${e.employeeId}','${encodeURIComponent(m.id)}',this.checked)"> <strong>${esc(m.title)}</strong></label><div class='small'>Trainer required before completion.</div></div><div><div class='small'>Date</div><input type='date' value='${esc(m.completedDate)}' onchange="modField('${e.employeeId}','${encodeURIComponent(m.id)}','completedDate',this.value)"><div class='small' style='margin-top:8px'>Trainer</div><input value='${esc(m.trainer)}' onchange="modField('${e.employeeId}','${encodeURIComponent(m.id)}','trainer',this.value)"></div><div><div class='small'>Score 1-5</div><input type='number' min='1' max='5' value='${esc(m.score)}' onchange="modField('${e.employeeId}','${encodeURIComponent(m.id)}','score',this.value)"><div class='small' style='margin-top:8px'>Notes</div><textarea onchange="modField('${e.employeeId}','${encodeURIComponent(m.id)}','notes',this.value)">${esc(m.notes)}</textarea></div></div></div>`).join('')}</div>`).join('');
+  document.getElementById('eval').innerHTML=evalCats.map(c=>`<div class='module'><div style='display:grid;grid-template-columns:1fr 120px;gap:12px;align-items:center'><div><div style='font-weight:700'>${esc(c)}</div><div class='small'>1 = unacceptable, 3 = meets standard, 5 = exceptional.</div></div><input type='number' min='1' max='5' value='${esc(e.evaluation[c])}' onchange="evalField('${e.employeeId}','${encodeURIComponent(c)}',this.value)"></div></div>`).join('');
+  document.getElementById('mgrNotes').value=e.managerNotes||'';
+  document.getElementById('evalSummary').innerHTML=`<div class='small'>Evaluation average</div><div style='font-size:28px;font-weight:700'>${evalAvg(e)||'—'}</div><div style='height:8px'></div><span class='badge ${badgeClass(rec(e))}'>${readyForFloor(e)?'Ready for Floor':rec(e)}</span>`;
+  document.getElementById('editName').value=e.name||'';
+  document.getElementById('editId').value=e.employeeId||'';
+  document.getElementById('editPosition').value=e.position||'';
+  document.getElementById('editEmail').value=e.email||'';
+  document.getElementById('editPhone').value=e.phone||'';
+}
+
+function renderBuckets(){const arr=state.employees.map(e=>entry(e.employeeId)).filter(Boolean); document.getElementById('readyBucket').innerHTML='<div class="small">Ready</div>'+ (arr.filter(e=>rec(e)==='Ready').map(e=>`<span class='badge ready' style='margin:8px 8px 0 0'>${esc(e.name)}</span>`).join('')||'<div class="small" style="margin-top:8px">None</div>'); document.getElementById('workBucket').innerHTML='<div class="small">Needs Work</div>'+ (arr.filter(e=>rec(e)==='Needs Work').map(e=>`<span class='badge work' style='margin:8px 8px 0 0'>${esc(e.name)}</span>`).join('')||'<div class="small" style="margin-top:8px">None</div>'); document.getElementById('notBucket').innerHTML='<div class="small">Not Ready</div>'+ (arr.filter(e=>rec(e)==='Not Ready').map(e=>`<span class='badge not' style='margin:8px 8px 0 0'>${esc(e.name)}</span>`).join('')||'<div class="small" style="margin-top:8px">None</div>');}
+function renderAll(){renderStats(); renderRoleFilter(); renderList(); renderSelected(); renderBuckets(); save();}
+window.pick=(id)=>{selectedId=id; renderAll();};
+window.modField=(eid,mid,field,val)=>{const m=entry(eid)?.modules.find(x=>x.id===decodeURIComponent(mid)); if(!m) return; m[field]=val; renderAll();};
+window.evalField=(eid,cat,val)=>{if(!entry(eid)) return; entry(eid).evaluation[decodeURIComponent(cat)]=val; renderAll();};
+window.toggleComplete=(eid,mid,checked)=>{const e=entry(eid); const m=e?.modules.find(x=>x.id===decodeURIComponent(mid)); if(!e || !m) return; if(checked&&!m.trainer){alert('Trainer name required before marking complete.'); renderAll(); return;} if(checked&&locked(e,m)){alert('Finish the previous shift before completing this item.'); renderAll(); return;} m.completed=checked; m.completedDate=checked?(m.completedDate||new Date().toISOString().slice(0,10)):''; renderAll();};
+window.toggleAllTrainingAction=()=>{const e=entry(selectedId); if(!e) return; const shouldComplete=!allTrainingComplete(e); if(shouldComplete){const today=new Date().toISOString().slice(0,10); e.modules.forEach(m=>{m.completed=true; m.completedDate=m.completedDate||today; m.trainer=m.trainer||'Complete All Training';});} else {e.modules.forEach(m=>{m.completed=false; m.completedDate=''; m.trainer=''; m.score=''; m.notes='';});} renderAll();};
+
+document.getElementById('mgrNotes').addEventListener('change',e=>{const current=entry(selectedId); if(!current) return; current.managerNotes=e.target.value; save();});
+document.getElementById('search').addEventListener('input',renderList);
+document.getElementById('roleFilter').addEventListener('change',renderList);
+document.getElementById('addCustom').addEventListener('click',()=>{const name=document.getElementById('customModule').value.trim(); if(!name) return; const e=entry(selectedId); if(!e) return; const s=currentShift(e); e.modules.push({id:`custom-${Date.now()}`,shift:s,title:`Custom: ${name}`,completed:false,completedDate:'',trainer:'',score:'',notes:''}); document.getElementById('customModule').value=''; renderAll();});
+document.getElementById('bulkAddBtn').addEventListener('click',()=>{const name=document.getElementById('bulkModule').value.trim(); if(!name) return; state.employees.forEach(emp=>{const e=entry(emp.employeeId); if(!e) return; const s=currentShift(e); e.modules.push({id:`bulk-${Date.now()}-${Math.random()}`,shift:s,title:`Custom: ${name}`,completed:false,completedDate:'',trainer:'',score:'',notes:''});}); document.getElementById('bulkModule').value=''; renderAll();});
+document.getElementById('saveEmployeeBtn').addEventListener('click',()=>{const oldId=selectedId; const name=document.getElementById('editName').value.trim(); const newId=document.getElementById('editId').value.trim(); const position=document.getElementById('editPosition').value.trim(); const email=document.getElementById('editEmail').value.trim(); const phone=document.getElementById('editPhone').value.trim(); if(!name||!newId||!position){alert('Name, ID, and position are required.'); return;} if(newId!==oldId && state.training[newId]){alert('That employee ID already exists.'); return;} const idx=state.employees.findIndex(e=>e.employeeId===oldId); if(idx<0) return; const existing=state.training[oldId]; let training=existing; if(newId!==oldId){delete state.training[oldId]; training={...existing, employeeId:newId}; state.training[newId]=training;} training.name=name; training.position=position; training.email=email; training.phone=phone; training.role=normRole(position); state.employees[idx]={name,employeeId:newId,position,email,phone}; selectedId=newId; renderAll(); alert('Employee updated.');});
+document.getElementById('deleteEmployeeBtn').addEventListener('click',()=>{if(!selectedId) return; const e=entry(selectedId); if(!e) return; if(!confirm(`Delete ${e.name}?`)) return; state.employees=state.employees.filter(x=>x.employeeId!==selectedId); delete state.training[selectedId]; selectedId=state.employees[0]?.employeeId||''; renderAll();});
+document.getElementById('addEmployeeBtn').addEventListener('click',()=>{const name=document.getElementById('newName').value.trim(); const employeeId=document.getElementById('newId').value.trim(); const position=document.getElementById('newPosition').value.trim(); const email=document.getElementById('newEmail').value.trim(); const phone=document.getElementById('newPhone').value.trim(); if(!name||!employeeId||!position){alert('Name, ID, and position are required.'); return;} if(state.training[employeeId]){alert('That employee ID already exists.'); return;} const emp={name,employeeId,position,email,phone}; state.employees.push(emp); const role=normRole(position); const evaluation={}; evalCats.forEach(c=>evaluation[c]=''); state.training[employeeId]={...emp,role,modules:makeModules(role),evaluation,managerNotes:''}; selectedId=employeeId; ['newName','newId','newPosition','newEmail','newPhone'].forEach(id=>document.getElementById(id).value=''); renderAll(); alert('Employee added.');});
+document.getElementById('exportBtn').addEventListener('click',()=>{const rows=[['Employee ID','Name','Position','Role','Shift','Module','Completed','Completed Date','Trainer','Score','Notes','Eval Average','Recommendation']]; state.employees.forEach(emp=>{const e=entry(emp.employeeId); if(!e) return; e.modules.forEach(m=>rows.push([e.employeeId,e.name,e.position,e.role,m.shift,m.title,m.completed?'Yes':'No',m.completedDate,m.trainer,m.score,m.notes,evalAvg(e),rec(e)]));}); const csv=rows.map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='employee-training-progress.csv'; a.click();});
+document.getElementById('exportEmployeesBtn').addEventListener('click',()=>{const rows=[['Employee ID','Name','Position','Email','Phone']]; state.employees.forEach(e=>rows.push([e.employeeId,e.name,e.position,e.email||'',e.phone||''])); const csv=rows.map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='employee-list.csv'; a.click();});
+document.getElementById('resetBtn').addEventListener('click',()=>{if(!confirm('Reset all progress and employee edits?')) return; state=fresh(); selectedId=state.employees[0]?.employeeId||''; renderAll();});
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); ['tracker','editor','evaluation','setup'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==btn.dataset.tab));}));
+
+(async function init(){
+  renderStats(); renderRoleFilter(); renderList(); renderSelected(); renderBuckets();
+  await loadFromSheets();
+  renderStats(); renderRoleFilter(); renderList(); renderSelected(); renderBuckets();
+  initFinished=true;
+})();
+</script>
+</body>
+</html>
